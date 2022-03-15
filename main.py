@@ -19,8 +19,41 @@ def get_count(string):
     return count
 
 
+def generate_tree_schema():
 
+    # use get references
+    output = "digraph G {"
+    output += "\n"
+    output += "{ "
+    for item in result["citation"]:
+        output += '"'
+        output += item["headline"]
+        output += '"'
+        output += "; "
 
+    output += "}"
+    output += " -> "
+    output += '"'
+    output += result["headline"]
+    output += '"'
+    output += "\n"
+
+    output += result["headline"]
+    output += " -> "
+    output += "{"
+    for citation in get_citations():
+        output += '"'
+        output += citation["title"]
+        output += '"'
+        output += "; "
+    output += "}"
+    output += "\n"
+    output += "}"
+
+    with open("graph1.gv", "w") as outfile:
+        outfile.write(output)
+
+    return output
 
 def get_reference_article_citation_count(url):
     time.sleep(2)
@@ -131,3 +164,4 @@ citations_range = len(result["citation"]) - 1 - len(get_citation_count())
 # print_main_article_metadata()
 # print_references()
 export_to_pdf()
+print(generate_tree_schema())
