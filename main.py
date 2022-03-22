@@ -3,12 +3,57 @@ from bs4 import BeautifulSoup
 import requests
 import json
 from lxml import etree
+import psycopg2
 
-url = "https://www.researchgate.net/publication/220591356_Identifying_Software_Project_Risks_An_International_Delphi_Study"
-request = requests.get(url)
-parser = "html.parser"
-soup = BeautifulSoup(request.text, parser)
-dom = etree.HTML(str(soup))
+import DatabaseCredentials
+
+URL = "https://www.researchgate.net/publication/220591356_Identifying_Software_Project_Risks_An_International_Delphi_Study"
+REQUEST = requests.get(URL)
+PARSER = "html.parser"
+SOUP = BeautifulSoup(REQUEST.text, PARSER)
+DOM = etree.HTML(str(SOUP))
+
+con = psycopg2.connect(database=DatabaseCredentials.DATABASE, user=DatabaseCredentials.USER,
+                       password=DatabaseCredentials.PASSWORD, host=DatabaseCredentials.HOST,
+                       port=DatabaseCredentials.PORT)
+print("Database opened successfully")
+
+
+def create_database():
+    with con.cursor() as cursor:
+        cursor.execute(open("Database_Model.sql", "r").read())
+        con.commit()
+        print("Created database")
+
+
+def insert_article_to_database(title, url, date, publisher, citation_count=None, reference_count=None):
+    cur = con.cursor()
+    try:
+        cur.execute(
+            "INSERT INTO ARTICLE (TITLE,URL,DATE,PUBLISHER, CITATION_COUNT, REFERENCE_COUNT) VALUES "
+            "(%(title)s, %(url)s, (TO_DATE(%(date)s,'YYYY-MM-DD')), %(publisher)s,%(citation_count)s,%(reference_count)s)",
+            {'title': title, 'url': url, 'date': date, 'publisher': publisher, 'citation_count': citation_count,
+             'reference_count': reference_count})
+        con.commit()
+        print("Record inserted successfully")
+    except psycopg2.errors.UniqueViolation:
+        print("Article was already added!")
+
+
+def insert_reference_to_database(title, url, date, publisher, main_article_url, reference_url):
+    cur = con.cursor()
+    insert_article_to_database(title, url, date, publisher)
+
+    cur.execute(
+        "INSERT INTO ARTICLEREFERENCE (main_article_url,reference_article_url) "
+        "VALUES (%(main_article_url)s,%(reference_url)s)",
+        {'main_article_url': main_article_url, 'reference_url': reference_url})
+
+
+def insert_citation_to_database(article_url_to_insert, citation_url_to_insert):
+    cur = con.cursor()
+    cur.execute(
+        "INSERT INTO ARTICLECITATION (article_id,citation_id) VALUES (article_id_to_insert,citation_id_to_insert)")
 
 
 def get_count(string):
@@ -20,7 +65,6 @@ def get_count(string):
 
 
 def generate_tree_schema():
-
     # use get references
     output = "digraph G {"
     output += "\n"
@@ -55,6 +99,7 @@ def generate_tree_schema():
 
     return output
 
+
 def get_reference_article_citation_count(url):
     time.sleep(2)
     request = requests.get(url)
@@ -66,32 +111,45 @@ def get_reference_article_citation_count(url):
 
 
 def get_citation_count():
-    citation = str(dom.xpath("//div[contains(text(),'Citations')]/text()")[0])
+    citation = str(DOM.xpath("//div[contains(text(),'Citations')]/text()")[0])
     return get_count(citation)
 
 
 def get_references_count():
-    references = str(dom.xpath("//div[contains(text(),'References')]/text()")[0])
+    references = str(DOM.xpath("//div[contains(text(),'References')]/text()")[0])
     return get_count(references)
 
 
 def get_ld_json() -> dict:
-    return json.loads("".join(soup.find("script", {"type": "application/ld+json"}).contents))
+    return json.loads("".join(SOUP.find("script", {"type": "application/ld+json"}).contents))
 
 
 def export_to_pdf():
+    title = result["headline"]
+    url = result["mainEntityOfPage"]
+    date = result["datePublished"]
+    publisher = result["publisher"]["name"]
+    citation_count = get_citation_count()
+    reference_count = get_references_count()
+    references = get_references()
+    citations = get_citations()
+
     paper_info = {
-        'title': result["headline"],
-        'url': result["mainEntityOfPage"],
-        'date': result["datePublished"],
-        'publisher': result["publisher"]["name"],
-        'citation count': get_citation_count(),
-        'reference count': get_references_count(),
-        'references': get_references(),
-        'citations': get_citations()
+        'title': title,
+        'url': url,
+        'date': date,
+        'publisher': publisher,
+        'citation count': citation_count,
+        'reference count': reference_count,
+        'references': references,
+        'citations': citations
     }
     result_json = json.dumps(paper_info)
 
+    insert_article_to_database(title, url, date, publisher, citation_count, reference_count)
+
+    for item in references:
+        insert_reference_to_database(item["title"],item["url"],item["date"],item["publisher"],url, item["url"])
     with open("result.json", "w") as outfile:
         outfile.write(result_json)
 
@@ -152,16 +210,17 @@ def print_references():
         print("===")
 
 
+# create_database()
+# insert_article_to_database('title_function', 'url_from_hell', '2006-01-01', 'kacprowski', 10, 200)
 
-
-
-get_citation_count()
+# get_citation_count()
 result = get_ld_json()
-
-
-
+#
 citations_range = len(result["citation"]) - 1 - len(get_citation_count())
-# print_main_article_metadata()
-# print_references()
+print_main_article_metadata()
+print_references()
 export_to_pdf()
-print(generate_tree_schema())
+# print(generate_tree_schema())
+
+
+con.close()
