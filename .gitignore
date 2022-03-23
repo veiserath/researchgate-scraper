@@ -1,7 +1,7 @@
 .DS_Store
 .idea
-/DatabaseCredentials.py
 /result.json
 /graph1.ps
 /graph1.png
 /graph1.gv
+/paths.py
