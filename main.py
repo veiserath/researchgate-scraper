@@ -1,11 +1,13 @@
+from time import sleep
+
 import Database
 import PdfExport
 import Crawler
 
-# Database.create_tables()
+Database.create_tables()
 
 
-# article = Crawler.crawl_url("https://www.researchgate.net/publication/308413321_Knowledge_Gained_from_Twitter_Data")
+# article = Crawler.crawl_url("https://www.researchgate.net/publication/328362505_Deep_Confidence_A_Computationally_Efficient_Framework_for_Calculating_Reliable_Prediction_Errors_for_Deep_Neural_Networks")
 #
 # PdfExport.export_to_pdf(article=article)
 #
@@ -14,19 +16,17 @@ import Crawler
 #                                     reference_count=article.reference_count)
 #
 # Database.insert_references_to_database(article=article)
+# Database.insert_citations_to_database(article=article)
 
-null_elements = Database.get_elements_from_database()
+null_elements = Database.get_elements_from_database_with_null_citations()
 
-print(null_elements)
-
+print(len(null_elements))
 for element in null_elements:
-    try:
-        article = Crawler.crawl_url(element[1])
-        Database.update_article_in_database(article)
-    except IndexError:
-        print(element[1])
+    article = Crawler.crawl_url(element[1])
+    Database.update_article_in_database(article)
+    Database.insert_references_to_database(article=article)
+    Database.insert_citations_to_database(article=article)
 
-# article = Crawler.crawl_url("https://www.researchgate.net/publication/313559770_Nonparametric_Statistics_for_the_Behavioral_Sciences_ed_2")
-# Database.update_article_in_database(article=article)
+
 
 Database.close_connection()

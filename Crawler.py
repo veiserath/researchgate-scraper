@@ -1,4 +1,5 @@
 import json
+from time import sleep
 
 import requests
 from bs4 import BeautifulSoup
@@ -15,7 +16,7 @@ def crawl_url(url=paths.URL):
     global URL
     URL = url
     result = get_ld_json()
-    print_main_article_metadata(result)
+    # print_main_article_metadata(result)
     article = construct_article_object(result)
     return article
 
@@ -31,8 +32,7 @@ def get_ld_json() -> dict:
 
 def get_references(result, citations_range):
     references = []
-    i = 0
-    for item in result["citation"]:
+    for i, item in enumerate(result["citation"]):
         if i >= citations_range:
             break
         paper_info = {
@@ -42,7 +42,6 @@ def get_references(result, citations_range):
             'publisher': item["publisher"]["name"],
         }
         references.append(paper_info)
-        i += 1
     return references
 
 
@@ -72,7 +71,7 @@ def get_citation_count():
         citation = str(DOM.xpath("//div[contains(text(),'Citations')]/text()")[0])
     except IndexError:
         return 0
-    return get_count(citation)
+    return int(get_count(citation))
 
 
 def get_references_count():
@@ -80,7 +79,7 @@ def get_references_count():
         references = str(DOM.xpath("//div[contains(text(),'References')]/text()")[0])
     except IndexError:
         return 0
-    return get_count(references)
+    return int(get_count(references))
 
 
 def print_main_article_metadata(result):
@@ -112,19 +111,17 @@ def print_references(result):
 
 
 def construct_article_object(result):
-    citations_range = len(result["citation"]) - 1 - len(get_citation_count())
-
+    citations_range = abs(len(result["citation"]) - 1 - get_citation_count())
     title = result["headline"]
     url = result["mainEntityOfPage"]
     date = result["datePublished"]
     publisher = result["publisher"]["name"]
-    try:
-        citation_count = int(get_citation_count())
-        reference_count = int(get_references_count())
-        references = get_references(result, citations_range)
-        citations = get_citations(result, citations_range)
-        article = Article(title=title, url=url, date=date, publisher=publisher, citation_count=citation_count,
-                          reference_count=reference_count, references=references, citations=citations)
-        return article
-    except ValueError:
-        print(get_citation_count())
+
+    citation_count = int(get_citation_count())
+    reference_count = int(get_references_count())
+    references = get_references(result, citations_range)
+    citations = get_citations(result, citations_range)
+    article = Article(title=title, url=url, date=date, publisher=publisher, citation_count=citation_count,
+                      reference_count=reference_count, references=references, citations=citations)
+    print(article.title)
+    return article

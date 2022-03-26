@@ -52,27 +52,45 @@ def insert_reference_to_database(title, url, date, publisher, main_article_url, 
     except psycopg2.errors.UniqueViolation:
         print("Reference was already added!")
 
+
 def insert_references_to_database(article):
     for item in article.references:
         insert_reference_to_database(item["title"], item["url"], item["date"], item["publisher"], article.url,
                                      item["url"])
 
 
-def insert_citation_to_database(article_url_to_insert, citation_url_to_insert):
+def insert_citation_to_database(title, url, date, publisher, main_article_url, citation_url):
     cur = con.cursor()
-    cur.execute(
-        "INSERT INTO ARTICLECITATION (article_id,citation_id) VALUES (article_id_to_insert,citation_id_to_insert)")
+    insert_article_to_database(title, url, date, publisher)
+    try:
+        cur.execute(
+            "INSERT INTO ARTICLECITATION (main_article_url,citation_article_url) VALUES (%(main_article_url)s,"
+            "%(citation_url)s)", {'main_article_url': main_article_url, 'citation_url': citation_url})
+
+    except psycopg2.errors.InFailedSqlTransaction:
+        print("Citation was already added!")
+    except psycopg2.errors.UniqueViolation:
+        print("Citation was already added!")
 
 
-def get_elements_from_database():
+def insert_citations_to_database(article):
+    for item in article.citations:
+        insert_citation_to_database(item["title"], item["url"], item["date"], item["publisher"], article.url,
+                                    item["url"])
+
+
+def get_elements_from_database_with_null_citations():
     cur = con.cursor()
     cur.execute('''SELECT * from article where citation_count is null''')
     return cur.fetchall()
+
 
 def update_article_in_database(article):
     cur = con.cursor()
     sql_update_query = """Update article set citation_count = %s, reference_count = %s where url = %s"""
     cur.execute(sql_update_query, (article.citation_count, article.reference_count, article.url))
+    print("Record updated successfully")
+
 
 # create_database()
 # insert_article_to_database('title_function', 'url_from_hell', '2006-01-01', 'kacprowski', 10, 200)

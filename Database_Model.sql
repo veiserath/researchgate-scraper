@@ -1,11 +1,11 @@
 -- Created by Vertabelo (http://vertabelo.com)
--- Last modification date: 2022-03-22 15:57:34.574
+-- Last modification date: 2022-03-24 12:19:46.864
 
 -- tables
 -- Table: Article
 CREATE TABLE Article (
-    Title varchar(150)  NOT NULL,
-    URL varchar(200)  NOT NULL,
+    Title varchar(200)  NOT NULL,
+    URL varchar(300)  NOT NULL,
     Date date  NULL,
     Publisher varchar(100)  NULL,
     Citation_count int  NULL,
@@ -15,15 +15,15 @@ CREATE TABLE Article (
 
 -- Table: ArticleCitation
 CREATE TABLE ArticleCitation (
-    Main_Article_URL varchar(200)  NOT NULL,
-    Citation_Article_URL varchar(200)  NOT NULL,
-    CONSTRAINT ArticleCitation_pk PRIMARY KEY (Main_Article_URL, Citation_Article_URL)
+    Main_Article_URL varchar(300)  NOT NULL,
+    Citation_Article_URL varchar(300)  NOT NULL,
+    CONSTRAINT ArticleCitation_pk PRIMARY KEY (Main_Article_URL,Citation_Article_URL)
 );
 
 -- Table: ArticleReference
 CREATE TABLE ArticleReference (
-    Main_Article_URL varchar(200)  NOT NULL,
-    Reference_Article_URL varchar(200)  NOT NULL,
+    Main_Article_URL varchar(300)  NOT NULL,
+    Reference_Article_URL varchar(300)  NOT NULL,
     CONSTRAINT ArticleReference_pk PRIMARY KEY (Main_Article_URL,Reference_Article_URL)
 );
 
