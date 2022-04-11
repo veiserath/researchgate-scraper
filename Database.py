@@ -1,5 +1,8 @@
 import psycopg2
+
+import Database
 import paths
+from TreeElement import TreeElement
 
 
 def connect_to_database():
@@ -85,15 +88,40 @@ def get_elements_from_database_with_null_citations():
     return cur.fetchall()
 
 
+def get_elements_from_database_with_citations():
+    cur = con.cursor()
+    cur.execute('''SELECT * from article where citation_count is not null''')
+    return cur.fetchall()
+
+
+def get_root_object():
+    root = get_elements_from_database_with_citations()[0]
+    tree_element = TreeElement(name=root[0], url=root[1], children=[])
+    return tree_element
+
+
+def get_children_one_level(node):
+    children_list_of_strings = Database.get_citations_with_main_url(node.url)
+    list_of_children_as_objects = []
+    for element in children_list_of_strings:
+        list_of_children_as_objects.append(TreeElement(name=element[0], url=element[1], children=[]))
+    return list_of_children_as_objects
+
+
+def get_citations_with_main_url(url):
+    cur = con.cursor()
+    cur.execute(
+        "select distinct * from article,articlecitation where article.url = citation_article_url and "
+        "articlecitation.main_article_url = (%(url)s) and article.citation_count is not null", {'url': url})
+    return cur.fetchall()
+
+
 def update_article_in_database(article):
     cur = con.cursor()
     sql_update_query = """Update article set citation_count = %s, reference_count = %s where url = %s"""
     cur.execute(sql_update_query, (article.citation_count, article.reference_count, article.url))
+
     print("Record updated successfully")
-
-
-# create_database()
-# insert_article_to_database('title_function', 'url_from_hell', '2006-01-01', 'kacprowski', 10, 200)
 
 
 def close_connection():
